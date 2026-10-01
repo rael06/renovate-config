@@ -1,0 +1,126 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Shared Renovate rules of the VPS apps (see rael06/vps, docs/architecture.md). Public on purpose: the Mend-hosted Renovate app does not let a public repository read a preset from a private one. Each repository extends github>rael06/renovate-config.",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard"
+  ],
+  "timezone": "Europe/Paris",
+  "schedule": [
+    "before 7am on monday"
+  ],
+  "minimumReleaseAge": "3 days",
+  "prConcurrentLimit": 5,
+  "platformAutomerge": false,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "before 7am on the first day of the month"
+    ]
+  },
+  "packageRules": [
+    {
+      "description": "Major updates of these legacy stacks wait for an approval in the Dependency Dashboard issue.",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "One weekly pull request for the non-major npm updates, merged by hand (merging deploys).",
+      "matchManagers": [
+        "npm"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "npm non-major"
+    },
+    {
+      "description": "GitHub Actions and pinned tools: non-major updates merge themselves once the checks pass.",
+      "matchManagers": [
+        "github-actions",
+        "custom.regex"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
+      "automerge": true
+    },
+    {
+      "description": "kamal-proxy is shared and only changes version on a reboot: no automerge; reboot by hand after merging.",
+      "matchDepNames": [
+        "basecamp/kamal-proxy"
+      ],
+      "automerge": false,
+      "prBodyNotes": [
+        "After merging: Actions → CI/CD → Run workflow on the default branch with « Reboot kamal-proxy » checked (a few seconds of outage)."
+      ]
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Kamal version installed by the workflows.",
+      "managerFilePatterns": [
+        "/(^|/)\\.github/workflows/[^/]+\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "gem install kamal -v (?<currentValue>\\d+\\.\\d+\\.\\d+)"
+      ],
+      "depNameTemplate": "kamal",
+      "datasourceTemplate": "rubygems"
+    },
+    {
+      "customType": "regex",
+      "description": "Wrangler version used by the workflows and the config schema.",
+      "managerFilePatterns": [
+        "/(^|/)\\.github/workflows/[^/]+\\.ya?ml$/",
+        "/(^|/)wrangler\\.jsonc?$/"
+      ],
+      "matchStrings": [
+        "wranglerVersion: \"(?<currentValue>\\d+\\.\\d+\\.\\d+)\"",
+        "wrangler@(?<currentValue>\\d+\\.\\d+\\.\\d+)/config-schema"
+      ],
+      "depNameTemplate": "wrangler",
+      "datasourceTemplate": "npm"
+    },
+    {
+      "customType": "regex",
+      "description": "Tagged images of the Kamal accessories (the app image itself has no tag). A change applies with `kamal accessory reboot <name>`.",
+      "managerFilePatterns": [
+        "/(^|/)config/deploy\\.yml$/"
+      ],
+      "matchStrings": [
+        "image: (?<depName>[a-z0-9][a-z0-9._/-]*):(?<currentValue>[A-Za-z0-9][A-Za-z0-9._-]*)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "kamal-proxy version shared by every app (proxy: run: version:).",
+      "managerFilePatterns": [
+        "/(^|/)config/deploy\\.yml$/"
+      ],
+      "matchStrings": [
+        "\n\\s+version: (?<currentValue>v\\d+\\.\\d+\\.\\d+)"
+      ],
+      "depNameTemplate": "basecamp/kamal-proxy",
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Trivy image of the weekly security scan.",
+      "managerFilePatterns": [
+        "/(^|/)security/[^/]+\\.sh$/"
+      ],
+      "matchStrings": [
+        "TRIVY=(?<depName>aquasec/trivy):(?<currentValue>\\d+\\.\\d+\\.\\d+)"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ]
+}
